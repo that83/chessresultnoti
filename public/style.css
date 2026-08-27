@@ -128,6 +128,79 @@ button.secondary:hover {
 
 .hidden { display: none !important; }
 
+.url-history {
+  margin-top: 12px;
+}
+
+.history-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+
+.history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-item {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.history-item-btn {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 280px;
+  overflow: hidden;
+}
+
+.history-item-btn:hover {
+  background: var(--row-alt);
+}
+
+.history-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-item-group {
+  flex: none;
+  font-size: 0.72rem;
+  color: var(--muted);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+.history-item-remove {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--panel-border);
+  color: var(--muted);
+  padding: 6px 9px;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.history-item-remove:hover {
+  background: var(--danger);
+  color: white;
+}
+
 .status-bar {
   display: flex;
   justify-content: space-between;
@@ -324,6 +397,15 @@ table thead th {
   color: white;
   text-align: left;
   padding: 8px 10px;
+}
+
+table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+table thead th.sortable:hover {
+  background: var(--accent-hover);
 }
 
 table tbody td {

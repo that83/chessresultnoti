@@ -1,6 +1,8 @@
 (() => {
   const STORAGE_KEY = 'chessresultnoti.lastUrl';
   const FILTER_STORAGE_KEY = 'chessresultnoti.playerFilter';
+  const HISTORY_KEY = 'chessresultnoti.history';
+  const HISTORY_MAX = 15;
   const POLL_MS = 45000;
   const HOVER_DELAY_MS = 180;
 
@@ -28,12 +30,16 @@
     playerFilterBar: document.getElementById('playerFilterBar'),
     playerFilterInput: document.getElementById('playerFilterInput'),
     playerTooltip: document.getElementById('playerTooltip'),
+    urlHistory: document.getElementById('urlHistory'),
   };
 
   let lastHash = null;
   let pollTimer = null;
   let currentUrl = null;
   let currentMeta = null;
+  let lastStartingList = null;
+  let lastStandings = null;
+  let startingListSortByPoints = false;
 
   const playerDataCache = new Map();
   let hoverTimer = null;
@@ -65,6 +71,106 @@
   function cellText(cell) {
     if (cell && typeof cell === 'object') return cell.text || '';
     return cell == null ? '' : String(cell);
+  }
+
+  function parseScore(text) {
+    if (text === undefined || text === null) return null;
+    const t = String(text).trim();
+    if (t === '') return null;
+    const n = parseFloat(t.replace(',', '.'));
+    return Number.isNaN(n) ? null : n;
+  }
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveHistoryEntry(meta) {
+    if (!meta || !meta.tnr) return;
+    const key = meta.tnr + '|' + (meta.group || '');
+    const list = loadHistory().filter((h) => h.key !== key);
+    list.unshift({
+      key,
+      url: meta.sourceUrl,
+      name: meta.tournamentName || meta.sourceUrl,
+      group: meta.group || '',
+      lastUsed: Date.now(),
+    });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, HISTORY_MAX)));
+    renderHistory();
+  }
+
+  function removeHistoryEntry(key) {
+    const list = loadHistory().filter((h) => h.key !== key);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = loadHistory();
+    el.urlHistory.innerHTML = '';
+    if (!list.length) {
+      el.urlHistory.classList.add('hidden');
+      return;
+    }
+    el.urlHistory.classList.remove('hidden');
+
+    const label = document.createElement('div');
+    label.className = 'history-label';
+    label.textContent = 'Giải đã xem gần đây:';
+    el.urlHistory.appendChild(label);
+
+    const listEl = document.createElement('div');
+    listEl.className = 'history-list';
+
+    list.forEach((h) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'history-item-btn';
+      btn.title = h.url;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'history-item-name';
+      nameSpan.textContent = h.name;
+      btn.appendChild(nameSpan);
+
+      if (h.group) {
+        const groupSpan = document.createElement('span');
+        groupSpan.className = 'history-item-group';
+        groupSpan.textContent = h.group;
+        btn.appendChild(groupSpan);
+      }
+
+      btn.addEventListener('click', () => {
+        el.urlInput.value = h.url;
+        track(h.url);
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'history-item-remove';
+      removeBtn.textContent = '×';
+      removeBtn.title = 'Xoá khỏi danh sách';
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeHistoryEntry(h.key);
+      });
+
+      item.appendChild(btn);
+      item.appendChild(removeBtn);
+      listEl.appendChild(item);
+    });
+
+    el.urlHistory.appendChild(listEl);
   }
 
   function hideTooltip() {
@@ -257,6 +363,70 @@
     tableEl.appendChild(tbody);
   }
 
+  function buildStartingListTableData(startingListTable, standings) {
+    const headers = startingListTable.headers.slice();
+    const nameIdx = headers.findIndex((h) => h === 'Tên');
+    const insertAt = nameIdx >= 0 ? nameIdx + 1 : headers.length;
+    headers.splice(insertAt, 0, 'Điểm hiện tại');
+
+    let scoreMap = null;
+    if (standings && standings.table) {
+      const sHeaders = standings.table.headers;
+      const sNameIdx = sHeaders.findIndex((h) => h === 'Tên');
+      const sScoreIdx = sHeaders.findIndex((h) => h === 'Điểm');
+      if (sNameIdx >= 0 && sScoreIdx >= 0) {
+        scoreMap = new Map();
+        standings.table.rows.forEach((row) => {
+          const nameCell = row[sNameIdx];
+          if (nameCell && nameCell.snr != null) {
+            scoreMap.set(nameCell.snr, cellText(row[sScoreIdx]));
+          }
+        });
+      }
+    }
+
+    const decorated = startingListTable.rows.map((row, origIndex) => {
+      const nameCell = nameIdx >= 0 ? row[nameIdx] : null;
+      const snr = nameCell && nameCell.snr;
+      let scoreText = '-';
+      if (scoreMap) {
+        scoreText = snr != null && scoreMap.has(snr) ? scoreMap.get(snr) : '0';
+      }
+      const newRow = row.slice();
+      newRow.splice(insertAt, 0, { text: scoreText });
+      return { row: newRow, origIndex, score: parseScore(scoreText) };
+    });
+
+    if (startingListSortByPoints) {
+      decorated.sort((a, b) => {
+        const as = a.score === null ? -Infinity : a.score;
+        const bs = b.score === null ? -Infinity : b.score;
+        if (bs !== as) return bs - as;
+        return a.origIndex - b.origIndex;
+      });
+    }
+
+    return { headers, rows: decorated.map((d) => d.row), scoreColIndex: insertAt };
+  }
+
+  function renderStartingListTable() {
+    if (!lastStartingList) return;
+    const augmented = buildStartingListTableData(lastStartingList, lastStandings);
+    renderTable(el.startingListTable, augmented);
+
+    const th = el.startingListTable.querySelectorAll('thead th')[augmented.scoreColIndex];
+    if (th) {
+      th.classList.add('sortable');
+      th.title = 'Bấm để sắp xếp theo điểm hiện tại (giảm dần), ưu tiên thứ tự ban đầu khi bằng điểm';
+      th.textContent = 'Điểm hiện tại' + (startingListSortByPoints ? ' ▼' : ' ⇅');
+      th.addEventListener('click', () => {
+        startingListSortByPoints = !startingListSortByPoints;
+        renderStartingListTable();
+        applyPlayerFilter();
+      });
+    }
+  }
+
   function applyPlayerFilter() {
     const q = normalizeText(el.playerFilterInput.value);
     document.querySelectorAll('#content table tbody tr').forEach((tr) => {
@@ -301,13 +471,20 @@
 
     if (data.startingList) {
       el.startingListTitle.textContent = data.startingList.title || 'Danh sách ban đầu';
-      renderTable(el.startingListTable, data.startingList.table);
+      lastStartingList = data.startingList.table;
+      lastStandings = data.standings;
+      renderStartingListTable();
       document.getElementById('startingListPanel').classList.remove('hidden');
     } else {
+      lastStartingList = null;
       document.getElementById('startingListPanel').classList.add('hidden');
     }
 
     applyPlayerFilter();
+
+    if (isFirstLoad) {
+      saveHistoryEntry(data.meta);
+    }
 
     if (!isFirstLoad && lastHash !== null && data.hash !== lastHash) {
       notifyUpdate(data);
@@ -379,6 +556,7 @@
     currentUrl = url.trim();
     lastHash = null;
     playerDataCache.clear();
+    startingListSortByPoints = false;
     localStorage.setItem(STORAGE_KEY, currentUrl);
     loadData(currentUrl, true);
     startPolling(currentUrl);
@@ -423,6 +601,8 @@
   if (savedFilter) {
     el.playerFilterInput.value = savedFilter;
   }
+
+  renderHistory();
 
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
