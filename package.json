@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Tong hop danh sach ban dau, xep hang sau van cuoi va bang xep cap van ke tiep cua mot nhom giai dau tren chess-results.com, kem thong bao khi co cap nhat.",
-  "type": "commonjs",
-  "engines": {
-    "node": ">=18"
-  },
+  "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"

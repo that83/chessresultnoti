@@ -1,9 +1,11 @@
-const path = require('path');
-const express = require('express');
-const { getTournamentData, UserFacingError } = require('./lib/scrape');
+import path from 'path';
+import { fileURLToPath } from 'url';
+import express from 'express';
+import { getTournamentData, UserFacingError } from './lib/scrape.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 const cache = new Map();
 const CACHE_TTL_MS = 15000;
@@ -34,6 +36,11 @@ app.get('/api/tournament', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`chessresultnoti dang chay tai http://localhost:${PORT}`);
-});
+if (process.env.VERCEL === undefined) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`chessresultnoti dang chay tai http://localhost:${PORT}`);
+  });
+}
+
+export default app;
