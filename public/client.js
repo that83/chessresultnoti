@@ -43,6 +43,7 @@
   let lastStandings = null;
   let startingListSortByPoints = false;
   let playerFilterTrackTimer = null;
+  let pendingPlayerFilterValue = null;
 
   let visitorId = null;
   let isNewVisitor = false;
@@ -68,6 +69,20 @@
       }).catch(() => {});
     } catch (e) {
       // ignore
+    }
+  }
+
+  function flushPlayerFilterTrack() {
+    clearTimeout(playerFilterTrackTimer);
+    playerFilterTrackTimer = null;
+    if (pendingPlayerFilterValue) {
+      sendTrackEvent({
+        type: 'player_filter',
+        tnr: currentMeta && currentMeta.tnr,
+        group: currentMeta && currentMeta.group,
+        playerName: pendingPlayerFilterValue,
+      });
+      pendingPlayerFilterValue = null;
     }
   }
 
@@ -641,22 +656,23 @@
     clearTimeout(playerFilterTrackTimer);
     const value = el.playerFilterInput.value.trim();
     if (value) {
-      playerFilterTrackTimer = setTimeout(() => {
-        sendTrackEvent({
-          type: 'player_filter',
-          tnr: currentMeta && currentMeta.tnr,
-          group: currentMeta && currentMeta.group,
-          playerName: value,
-        });
-      }, PLAYER_FILTER_TRACK_DELAY_MS);
+      pendingPlayerFilterValue = value;
+      playerFilterTrackTimer = setTimeout(flushPlayerFilterTrack, PLAYER_FILTER_TRACK_DELAY_MS);
+    } else {
+      pendingPlayerFilterValue = null;
     }
   });
 
   document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushPlayerFilterTrack();
+    }
     if (document.visibilityState === 'visible' && currentUrl) {
       loadData(currentUrl, false);
     }
   });
+
+  window.addEventListener('pagehide', flushPlayerFilterTrack);
 
   const savedFilter = localStorage.getItem(FILTER_STORAGE_KEY);
   if (savedFilter) {
