@@ -2,9 +2,11 @@
   const STORAGE_KEY = 'chessresultnoti.lastUrl';
   const FILTER_STORAGE_KEY = 'chessresultnoti.playerFilter';
   const HISTORY_KEY = 'chessresultnoti.history';
+  const VISITOR_ID_KEY = 'chessresultnoti.visitorId';
   const HISTORY_MAX = 15;
   const POLL_MS = 45000;
   const HOVER_DELAY_MS = 180;
+  const PLAYER_FILTER_TRACK_DELAY_MS = 1500;
 
   const el = {
     urlInput: document.getElementById('urlInput'),
@@ -40,6 +42,34 @@
   let lastStartingList = null;
   let lastStandings = null;
   let startingListSortByPoints = false;
+  let playerFilterTrackTimer = null;
+
+  let visitorId = null;
+  let isNewVisitor = false;
+  try {
+    visitorId = localStorage.getItem(VISITOR_ID_KEY);
+    if (!visitorId) {
+      visitorId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(36).slice(2));
+      localStorage.setItem(VISITOR_ID_KEY, visitorId);
+      isNewVisitor = true;
+    }
+  } catch (e) {
+    // localStorage unavailable; skip visitor tracking
+  }
+
+  function sendTrackEvent(payload) {
+    if (!visitorId) return;
+    try {
+      fetch('/api/track-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitorId, ...payload }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (e) {
+      // ignore
+    }
+  }
 
   const playerDataCache = new Map();
   let hoverTimer = null;
@@ -484,6 +514,13 @@
 
     if (isFirstLoad) {
       saveHistoryEntry(data.meta);
+      sendTrackEvent({
+        type: 'view_tournament',
+        tnr: data.meta.tnr,
+        group: data.meta.group,
+        tournamentName: data.meta.tournamentName,
+        url: data.meta.sourceUrl,
+      });
     }
 
     if (!isFirstLoad && lastHash !== null && data.hash !== lastHash) {
@@ -600,6 +637,19 @@
   el.playerFilterInput.addEventListener('input', () => {
     localStorage.setItem(FILTER_STORAGE_KEY, el.playerFilterInput.value);
     applyPlayerFilter();
+
+    clearTimeout(playerFilterTrackTimer);
+    const value = el.playerFilterInput.value.trim();
+    if (value) {
+      playerFilterTrackTimer = setTimeout(() => {
+        sendTrackEvent({
+          type: 'player_filter',
+          tnr: currentMeta && currentMeta.tnr,
+          group: currentMeta && currentMeta.group,
+          playerName: value,
+        });
+      }, PLAYER_FILTER_TRACK_DELAY_MS);
+    }
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -614,6 +664,10 @@
   }
 
   renderHistory();
+
+  if (isNewVisitor) {
+    sendTrackEvent({ type: 'new_visitor' });
+  }
 
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
