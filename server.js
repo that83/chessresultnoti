@@ -20,8 +20,9 @@ app.get('/api/tournament', async (req, res) => {
     return res.status(400).json({ error: 'Thiếu tham số url.' });
   }
 
+  const forceFresh = req.query.fresh === '1';
   const cached = cache.get(input);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+  if (!forceFresh && cached && Date.now() - cached.at < CACHE_TTL_MS) {
     return res.json(cached.data);
   }
 

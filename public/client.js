@@ -512,14 +512,16 @@
     }
   }
 
-  async function loadData(url, isFirstLoad) {
+  async function loadData(url, isFirstLoad, force) {
     clearError();
     if (isFirstLoad) {
       el.loading.classList.remove('hidden');
       el.content.classList.add('hidden');
     }
     try {
-      const res = await fetch('/api/tournament?url=' + encodeURIComponent(url));
+      const qs = new URLSearchParams({ url });
+      if (force) qs.set('fresh', '1');
+      const res = await fetch('/api/tournament?' + qs.toString());
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Có lỗi xảy ra.');
@@ -566,8 +568,17 @@
   el.urlInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') track(el.urlInput.value);
   });
-  el.refreshBtn.addEventListener('click', () => {
-    if (currentUrl) loadData(currentUrl, false);
+  el.refreshBtn.addEventListener('click', async () => {
+    if (!currentUrl || el.refreshBtn.disabled) return;
+    const originalText = el.refreshBtn.textContent;
+    el.refreshBtn.disabled = true;
+    el.refreshBtn.textContent = '↻ Đang làm mới...';
+    try {
+      await loadData(currentUrl, false, true);
+    } finally {
+      el.refreshBtn.disabled = false;
+      el.refreshBtn.textContent = originalText;
+    }
   });
   el.dismissBanner.addEventListener('click', () => {
     el.updateBanner.classList.add('hidden');
