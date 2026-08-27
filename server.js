@@ -84,7 +84,10 @@ app.post('/api/track-event', async (req, res) => {
 
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
 
-  logEvent(body.type, { ...body, ip }).catch(() => {});
+  // Must await: on serverless, work left running after the response is
+  // sent can be frozen/killed before it completes (most likely to bite
+  // events fired right as the tab is closing, e.g. player_filter).
+  await logEvent(body.type, { ...body, ip });
   res.status(204).end();
 });
 
