@@ -1,0 +1,262 @@
+:root {
+  --bg: #0f1420;
+  --panel: #171e2e;
+  --panel-border: #2a3350;
+  --text: #e7ecf7;
+  --muted: #93a0bf;
+  --accent: #4f8cff;
+  --accent-hover: #6fa1ff;
+  --good: #2ecc71;
+  --danger: #ff6b6b;
+  --row-alt: #1c2338;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f6fb;
+    --panel: #ffffff;
+    --panel-border: #dde3f0;
+    --text: #1a2033;
+    --muted: #5b6478;
+    --accent: #3366ee;
+    --accent-hover: #2554d8;
+    --good: #1c9a53;
+    --danger: #d8433f;
+    --row-alt: #f0f3fa;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.topbar {
+  padding: 24px 20px 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.topbar h1 {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  max-width: 760px;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+.input-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 18px;
+  margin-top: 16px;
+}
+
+.input-card label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#urlInput {
+  flex: 1 1 400px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: white;
+  transition: background 0.15s ease;
+}
+
+button:hover { background: var(--accent-hover); }
+
+button.secondary {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  font-weight: 500;
+}
+
+button.secondary:hover {
+  background: var(--row-alt);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 10px 0 0;
+}
+
+.error {
+  color: var(--danger);
+  font-weight: 600;
+  margin: 10px 0 0;
+}
+
+.hidden { display: none !important; }
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+}
+
+.tournament-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.muted { color: var(--muted); font-size: 0.85rem; }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.update-banner {
+  margin-top: 14px;
+  background: linear-gradient(90deg, #ffb347, #ff7b54);
+  color: #241300;
+  padding: 12px 16px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  animation: pop 0.25s ease;
+}
+
+.update-banner button {
+  background: rgba(0,0,0,0.15);
+  color: #241300;
+}
+
+@keyframes pop {
+  from { transform: scale(0.97); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.loading {
+  margin-top: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--accent);
+  color: white;
+  text-align: left;
+  padding: 8px 10px;
+}
+
+table tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+table tbody tr:nth-child(even) {
+  background: var(--row-alt);
+}
+
+table tbody tr.highlight {
+  outline: 2px solid var(--good);
+}
+
+footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+footer a { color: var(--accent); }
+
+.empty-note {
+  color: var(--muted);
+  font-style: italic;
+  padding: 10px 0;
+}

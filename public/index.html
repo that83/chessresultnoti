@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Theo dõi giải cờ vua - chess-results.com</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="topbar">
+  <h1>Theo dõi giải đấu cờ vua</h1>
+  <p class="subtitle">Gộp Danh sách ban đầu, Xếp hạng sau ván cuối và Bảng xếp cặp ván kế tiếp từ chess-results.com vào một trang, kèm thông báo khi có cập nhật.</p>
+</header>
+
+<main>
+  <section class="input-card">
+    <label for="urlInput">Dán URL của nhóm giải đấu (chess-results.com)</label>
+    <div class="input-row">
+      <input id="urlInput" type="text" placeholder="https://chess-results.com/tnr1483078.aspx?lan=29&art=2&rd=4&fed=HNO&turdet=YES&group=U06" />
+      <button id="trackBtn">Theo dõi</button>
+    </div>
+    <p class="hint">Có thể dán bất kỳ liên kết nào của giải (danh sách ban đầu, xếp hạng, hay bảng xếp cặp) - hệ thống sẽ tự nhận diện giải và vòng đấu hiện tại.</p>
+    <p id="errorMsg" class="error hidden"></p>
+  </section>
+
+  <section id="statusBar" class="status-bar hidden">
+    <div class="status-left">
+      <span id="tournamentName" class="tournament-name"></span>
+    </div>
+    <div class="status-right">
+      <span id="lastUpdated" class="muted"></span>
+      <button id="notifyBtn" class="secondary">🔔 Bật thông báo</button>
+      <button id="refreshBtn" class="secondary">↻ Làm mới</button>
+      <label class="toggle">
+        <input type="checkbox" id="autoToggle" checked />
+        Tự động cập nhật (<span id="pollInterval">45</span>s)
+      </label>
+    </div>
+  </section>
+
+  <div id="updateBanner" class="update-banner hidden">
+    ⚡ Có cập nhật mới! <button id="dismissBanner">Đóng</button>
+  </div>
+
+  <section id="loading" class="loading hidden">Đang tải dữ liệu...</section>
+
+  <section id="content" class="content hidden">
+    <div class="panel" id="pairingsPanel">
+      <h2 id="pairingsTitle">Bảng xếp cặp</h2>
+      <div class="table-wrap"><table id="pairingsTable"></table></div>
+    </div>
+
+    <div class="panel" id="standingsPanel">
+      <h2 id="standingsTitle">Xếp hạng sau ván cuối</h2>
+      <div class="table-wrap"><table id="standingsTable"></table></div>
+    </div>
+
+    <div class="panel" id="startingListPanel">
+      <h2 id="startingListTitle">Danh sách ban đầu</h2>
+      <div class="table-wrap"><table id="startingListTable"></table></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Dữ liệu lấy từ <a href="https://chess-results.com" target="_blank" rel="noopener">chess-results.com</a>. Trang này chỉ tổng hợp hiển thị lại, không lưu trữ dữ liệu giải đấu.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
