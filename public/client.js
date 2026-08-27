@@ -45,6 +45,8 @@
   let lastStartingList = null;
   let lastStandings = null;
   let startingListSortByPoints = false;
+  const baseTitle = document.title;
+  let unreadCount = 0;
   let playerFilterTrackTimer = null;
   let pendingPlayerFilterValue = null;
 
@@ -616,6 +618,7 @@
       const changes = diffStartingListSnapshots(oldSnap, newSnap);
       if (changes.length) {
         appendChangeLog(tnr, group, changes);
+        markUnreadUpdate();
       }
     }
 
@@ -703,8 +706,29 @@
     lastHash = data.hash;
   }
 
+  function isPageActive() {
+    return document.visibilityState === 'visible' && document.hasFocus();
+  }
+
+  function updateTabTitle() {
+    document.title = unreadCount > 0 ? `(${unreadCount}) ${baseTitle}` : baseTitle;
+  }
+
+  function markUnreadUpdate() {
+    if (isPageActive()) return;
+    unreadCount += 1;
+    updateTabTitle();
+  }
+
+  function clearUnreadUpdate() {
+    if (unreadCount === 0) return;
+    unreadCount = 0;
+    updateTabTitle();
+  }
+
   function notifyUpdate(data) {
     el.updateBanner.classList.remove('hidden');
+    markUnreadUpdate();
     let body = 'Trang giải đấu vừa có thay đổi mới.';
     if (data.pairings && !data.pairings.isFinal) {
       body = `Có cập nhật cho ván ${data.pairings.round}.`;
@@ -833,6 +857,15 @@
     }
     if (document.visibilityState === 'visible' && currentUrl) {
       loadData(currentUrl, false);
+    }
+    if (isPageActive()) {
+      clearUnreadUpdate();
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    if (isPageActive()) {
+      clearUnreadUpdate();
     }
   });
 
