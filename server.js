@@ -108,9 +108,9 @@ app.get('/api/admin/events', async (req, res) => {
         (v.tournaments || [])
           .map(
             (t) =>
-              `<div>${escapeHtml(t.tournamentName || '')} <span class="muted">(${escapeHtml(t.group || '')}, tnr${escapeHtml(t.tnr || '')}, ${escapeHtml(shortTime(t.at))})</span></div>`
+              `<div>${escapeHtml(t.tournamentName || '')} <span class="muted">(${escapeHtml(t.group || '')}, tnr${escapeHtml(t.tnr || '')}, ${escapeHtml(shortTime(t.at))})</span><br/><a href="${escapeHtml(t.url || '')}" target="_blank">${escapeHtml(t.url || '')}</a></div>`
           )
-          .join('') || '<span class="muted">-</span>';
+          .join('<hr style="border-color:#2a3350;margin:6px 0">') || '<span class="muted">-</span>';
       const namesHtml =
         (v.playerNames || [])
           .map((p) => `<span class="chip">${escapeHtml(p.name)}</span>`)
