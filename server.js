@@ -2,7 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import { getTournamentData, getPlayerHistory, UserFacingError } from './lib/scrape.js';
-import { logEvent, listEvents } from './lib/log.js';
+import { logEvent, listVisitors } from './lib/log.js';
 
 if (process.env.VERCEL === undefined) {
   try {
@@ -93,21 +93,33 @@ app.get('/api/admin/events', async (req, res) => {
     return res.status(404).send('Not found');
   }
 
-  const events = await listEvents(300);
+  const visitors = await listVisitors(200);
 
   if (req.query.format === 'json') {
-    return res.json(events);
+    return res.json(visitors);
   }
 
-  const rows = events
-    .map((e) => {
-      const detail =
-        e.type === 'view_tournament'
-          ? `${escapeHtml(e.tournamentName || '')} <span class="muted">(${escapeHtml(e.group || '')}, tnr${escapeHtml(e.tnr || '')})</span><br/><a href="${escapeHtml(e.url || '')}" target="_blank">${escapeHtml(e.url || '')}</a>`
-          : e.type === 'player_filter'
-          ? `Theo dõi: <b>${escapeHtml(e.playerName || '')}</b> <span class="muted">(tnr${escapeHtml(e.tnr || '')}/${escapeHtml(e.group || '')})</span>`
-          : '';
-      return `<tr><td>${escapeHtml(e.at || '')}</td><td>${escapeHtml(e.type || '')}</td><td>${escapeHtml((e.visitorId || '').slice(0, 8))}</td><td>${escapeHtml(e.ip || '')}</td><td>${detail}</td></tr>`;
+  const rows = visitors
+    .map((v) => {
+      const tournamentsHtml =
+        (v.tournaments || [])
+          .map(
+            (t) =>
+              `<div>${escapeHtml(t.tournamentName || '')} <span class="muted">(${escapeHtml(t.group || '')}, tnr${escapeHtml(t.tnr || '')}, ${escapeHtml(shortTime(t.at))})</span></div>`
+          )
+          .join('') || '<span class="muted">-</span>';
+      const namesHtml =
+        (v.playerNames || [])
+          .map((p) => `<span class="chip">${escapeHtml(p.name)}</span>`)
+          .join(' ') || '<span class="muted">-</span>';
+      return `<tr>
+        <td>${escapeHtml(shortTime(v.firstSeen))}</td>
+        <td>${escapeHtml(shortTime(v.lastSeen))}</td>
+        <td>${escapeHtml((v.visitorId || '').slice(0, 8))}</td>
+        <td>${escapeHtml(v.ip || '')}</td>
+        <td>${tournamentsHtml}</td>
+        <td>${namesHtml}</td>
+      </tr>`;
     })
     .join('\n');
 
@@ -121,13 +133,23 @@ th,td{padding:6px 10px;border-bottom:1px solid #2a3350;text-align:left;vertical-
 th{background:#4f8cff;color:white;position:sticky;top:0}
 .muted{color:#93a0bf}
 a{color:#4f8cff}
+.chip{display:inline-block;background:#1c2338;border:1px solid #2a3350;border-radius:999px;padding:2px 8px;margin:2px 4px 2px 0}
 </style></head>
 <body>
-<h2>Nhat ky su dung (${events.length} su kien gan nhat)</h2>
-<table><thead><tr><th>Thoi gian</th><th>Loai</th><th>Visitor</th><th>IP</th><th>Chi tiet</th></tr></thead>
+<h2>Nhat ky su dung (${visitors.length} nguoi da dung)</h2>
+<table><thead><tr><th>Lan dau</th><th>Lan cuoi</th><th>Visitor</th><th>IP</th><th>Giai da xem</th><th>Ten da tim</th></tr></thead>
 <tbody>${rows}</tbody></table>
 </body></html>`);
 });
+
+function shortTime(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('vi-VN');
+  } catch {
+    return iso;
+  }
+}
 
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({

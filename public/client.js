@@ -673,6 +673,7 @@
   });
 
   window.addEventListener('pagehide', flushPlayerFilterTrack);
+  el.playerFilterInput.addEventListener('blur', flushPlayerFilterTrack);
 
   const savedFilter = localStorage.getItem(FILTER_STORAGE_KEY);
   if (savedFilter) {
