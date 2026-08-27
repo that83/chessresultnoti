@@ -7,6 +7,7 @@
   const POLL_MS = 45000;
   const HOVER_DELAY_MS = 180;
   const PLAYER_FILTER_TRACK_DELAY_MS = 1500;
+  const CHANGELOG_MAX = 100;
 
   const el = {
     urlInput: document.getElementById('urlInput'),
@@ -33,6 +34,8 @@
     playerFilterInput: document.getElementById('playerFilterInput'),
     playerTooltip: document.getElementById('playerTooltip'),
     urlHistory: document.getElementById('urlHistory'),
+    changeLogList: document.getElementById('changeLogList'),
+    clearChangeLogBtn: document.getElementById('clearChangeLogBtn'),
   };
 
   let lastHash = null;
@@ -472,6 +475,159 @@
     }
   }
 
+  function snapshotStorageKey(tnr, group) {
+    return `chessresultnoti.snapshot.${tnr}.${group}`;
+  }
+
+  function changeLogStorageKey(tnr, group) {
+    return `chessresultnoti.changelog.${tnr}.${group}`;
+  }
+
+  function buildStartingListSnapshot(table) {
+    const headers = table.headers;
+    const nameIdx = headers.findIndex((h) => h === 'Tên');
+    const fideIdx = headers.findIndex((h) => h === 'FideID');
+    const ratingIdx = headers.findIndex((h) => h === 'RtQT');
+    const noIdx = headers.findIndex((h) => h === 'Số');
+
+    return table.rows
+      .map((row, i) => {
+        const nameCell = nameIdx >= 0 ? row[nameIdx] : null;
+        const snr = nameCell && typeof nameCell === 'object' ? nameCell.snr : null;
+        if (snr == null) return null;
+        return {
+          snr,
+          name: nameIdx >= 0 ? cellText(row[nameIdx]) : '',
+          fideId: fideIdx >= 0 ? cellText(row[fideIdx]) : '',
+          rating: ratingIdx >= 0 ? cellText(row[ratingIdx]) : '',
+          no: noIdx >= 0 ? cellText(row[noIdx]) : String(i + 1),
+          position: i,
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function diffStartingListSnapshots(oldRows, newRows) {
+    const changes = [];
+    const oldBySnr = new Map(oldRows.map((p) => [p.snr, p]));
+    const newBySnr = new Map(newRows.map((p) => [p.snr, p]));
+
+    newRows.forEach((p) => {
+      if (!oldBySnr.has(p.snr)) {
+        changes.push({ type: 'added', name: p.name, no: p.no });
+      }
+    });
+    oldRows.forEach((p) => {
+      if (!newBySnr.has(p.snr)) {
+        changes.push({ type: 'removed', name: p.name, no: p.no });
+      }
+    });
+    newRows.forEach((p) => {
+      const old = oldBySnr.get(p.snr);
+      if (!old) return;
+      if (old.name !== p.name) {
+        changes.push({ type: 'name_changed', name: p.name, no: p.no, from: old.name, to: p.name });
+      }
+      if (old.rating !== p.rating) {
+        changes.push({ type: 'rating_changed', name: p.name, no: p.no, from: old.rating, to: p.rating });
+      }
+      if (old.fideId !== p.fideId) {
+        changes.push({ type: 'fideid_changed', name: p.name, no: p.no, from: old.fideId, to: p.fideId });
+      }
+      if (old.position !== p.position) {
+        changes.push({ type: 'order_changed', name: p.name, no: p.no, from: old.position + 1, to: p.position + 1 });
+      }
+    });
+
+    return changes;
+  }
+
+  function loadChangeLog(tnr, group) {
+    try {
+      const raw = localStorage.getItem(changeLogStorageKey(tnr, group));
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function appendChangeLog(tnr, group, newEntries) {
+    if (!newEntries.length) return;
+    const now = new Date().toISOString();
+    const existing = loadChangeLog(tnr, group);
+    const merged = [...newEntries.map((e) => ({ ...e, at: now })), ...existing].slice(0, CHANGELOG_MAX);
+    try {
+      localStorage.setItem(changeLogStorageKey(tnr, group), JSON.stringify(merged));
+    } catch (e) {
+      // storage full or unavailable; skip persisting
+    }
+  }
+
+  function formatChangeEntry(e) {
+    const time = new Date(e.at).toLocaleString('vi-VN');
+    switch (e.type) {
+      case 'added':
+        return `➕ [${time}] Thêm đấu thủ mới: ${e.name} (STT ${e.no})`;
+      case 'removed':
+        return `➖ [${time}] Đấu thủ rời khỏi danh sách: ${e.name} (STT ${e.no})`;
+      case 'rating_changed':
+        return `🔄 [${time}] ${e.name}: RtQT thay đổi ${e.from || '(trống)'} → ${e.to || '(trống)'}`;
+      case 'fideid_changed':
+        return `🔄 [${time}] ${e.name}: FideID thay đổi ${e.from || '(trống)'} → ${e.to || '(trống)'}`;
+      case 'order_changed':
+        return `↕️ [${time}] ${e.name}: Thứ tự thay đổi #${e.from} → #${e.to}`;
+      case 'name_changed':
+        return `✏️ [${time}] STT ${e.no}: Tên thay đổi "${e.from}" → "${e.to}"`;
+      default:
+        return '';
+    }
+  }
+
+  function renderChangeLog(tnr, group) {
+    const log = loadChangeLog(tnr, group);
+    el.changeLogList.innerHTML = '';
+    if (!log.length) {
+      const p = document.createElement('div');
+      p.className = 'empty-note';
+      p.textContent = 'Chưa phát hiện thay đổi nào so với lần xem trước trên trình duyệt này.';
+      el.changeLogList.appendChild(p);
+      return;
+    }
+    log.forEach((e) => {
+      const div = document.createElement('div');
+      div.className = 'changelog-entry ' + e.type;
+      div.textContent = formatChangeEntry(e);
+      el.changeLogList.appendChild(div);
+    });
+  }
+
+  function trackStartingListChanges(tnr, group, startingListTable) {
+    const newSnap = buildStartingListSnapshot(startingListTable);
+    let oldSnap = null;
+    try {
+      const raw = localStorage.getItem(snapshotStorageKey(tnr, group));
+      oldSnap = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      oldSnap = null;
+    }
+
+    if (oldSnap) {
+      const changes = diffStartingListSnapshots(oldSnap, newSnap);
+      if (changes.length) {
+        appendChangeLog(tnr, group, changes);
+      }
+    }
+
+    try {
+      localStorage.setItem(snapshotStorageKey(tnr, group), JSON.stringify(newSnap));
+    } catch (e) {
+      // storage full or unavailable; skip persisting the snapshot
+    }
+
+    renderChangeLog(tnr, group);
+  }
+
   function applyPlayerFilter() {
     const q = normalizeText(el.playerFilterInput.value);
     document.querySelectorAll('#content table tbody tr').forEach((tr) => {
@@ -520,9 +676,12 @@
       lastStandings = data.standings;
       renderStartingListTable();
       document.getElementById('startingListPanel').classList.remove('hidden');
+      trackStartingListChanges(data.meta.tnr, data.meta.group, data.startingList.table);
+      document.getElementById('changeLogPanel').classList.remove('hidden');
     } else {
       lastStartingList = null;
       document.getElementById('startingListPanel').classList.add('hidden');
+      document.getElementById('changeLogPanel').classList.add('hidden');
     }
 
     applyPlayerFilter();
@@ -634,6 +793,11 @@
   });
   el.dismissBanner.addEventListener('click', () => {
     el.updateBanner.classList.add('hidden');
+  });
+  el.clearChangeLogBtn.addEventListener('click', () => {
+    if (!currentMeta) return;
+    localStorage.removeItem(changeLogStorageKey(currentMeta.tnr, currentMeta.group));
+    renderChangeLog(currentMeta.tnr, currentMeta.group);
   });
   el.notifyBtn.addEventListener('click', async () => {
     if (!window.Notification) {

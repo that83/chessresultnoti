@@ -442,3 +442,40 @@ footer a { color: var(--accent); }
   font-style: italic;
   padding: 10px 0;
 }
+
+.changelog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.changelog-header h2 {
+  margin: 0;
+}
+
+.changelog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.changelog-entry {
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--row-alt);
+  border-left: 3px solid var(--panel-border);
+}
+
+.changelog-entry.added { border-left-color: var(--good); }
+.changelog-entry.removed { border-left-color: var(--danger); }
+.changelog-entry.rating_changed,
+.changelog-entry.fideid_changed,
+.changelog-entry.name_changed { border-left-color: var(--accent); }
+.changelog-entry.order_changed { border-left-color: #ffb347; }
