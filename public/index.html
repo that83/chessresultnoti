@@ -38,6 +38,11 @@
     </div>
   </section>
 
+  <section id="playerFilterBar" class="player-filter-bar hidden">
+    <label for="playerFilterInput">🔎 Theo dõi đấu thủ (tô sáng trong tất cả các bảng)</label>
+    <input id="playerFilterInput" type="text" placeholder="Nhập tên đấu thủ..." autocomplete="off" />
+  </section>
+
   <div id="updateBanner" class="update-banner hidden">
     ⚡ Có cập nhật mới! <button id="dismissBanner">Đóng</button>
   </div>
@@ -61,6 +66,8 @@
     </div>
   </section>
 </main>
+
+<div id="playerTooltip" class="player-tooltip hidden"></div>
 
 <footer>
   <p>Dữ liệu lấy từ <a href="https://chess-results.com" target="_blank" rel="noopener">chess-results.com</a>. Trang này chỉ tổng hợp hiển thị lại, không lưu trữ dữ liệu giải đấu.</p>

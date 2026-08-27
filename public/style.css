@@ -163,6 +163,101 @@ button.secondary:hover {
   color: var(--muted);
 }
 
+.player-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+}
+
+.player-filter-bar label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+#playerFilterInput {
+  flex: 1 1 220px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.player-link {
+  cursor: help;
+  border-bottom: 1px dotted var(--accent);
+}
+
+.player-tooltip {
+  position: fixed;
+  z-index: 1000;
+  width: max-content;
+  max-width: min(90vw, 560px);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  pointer-events: none;
+}
+
+.player-tooltip .tt-history-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.player-tooltip .tt-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.player-tooltip .tt-bio {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 10px;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+.player-tooltip .tt-bio span:nth-child(odd) {
+  color: var(--muted);
+}
+
+.player-tooltip .tt-bio span:nth-child(even) {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.player-tooltip table {
+  font-size: 0.78rem;
+  white-space: nowrap;
+  border-collapse: collapse;
+}
+
+.player-tooltip table thead th {
+  padding: 4px 6px;
+  position: static;
+}
+
+.player-tooltip table tbody td {
+  padding: 4px 6px;
+}
+
+.player-tooltip .tt-loading,
+.player-tooltip .tt-error {
+  color: var(--muted);
+}
+
 .update-banner {
   margin-top: 14px;
   background: linear-gradient(90deg, #ffb347, #ff7b54);
@@ -242,6 +337,11 @@ table tbody tr:nth-child(even) {
 
 table tbody tr.highlight {
   outline: 2px solid var(--good);
+  background: rgba(46, 204, 113, 0.18);
+}
+
+table tbody tr.highlight td {
+  font-weight: 700;
 }
 
 footer {
