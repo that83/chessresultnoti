@@ -921,6 +921,27 @@
     updateTabTitle();
   }
 
+  function syncNotifyButtonUI() {
+    if (!window.Notification) {
+      el.notifyBtn.textContent = '🔕 Trình duyệt không hỗ trợ';
+      el.notifyBtn.disabled = true;
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      el.notifyBtn.textContent = '🔔 Thông báo đang bật';
+    } else if (Notification.permission === 'denied') {
+      el.notifyBtn.textContent = '🔕 Thông báo bị chặn';
+    } else {
+      el.notifyBtn.textContent = '🔔 Bật thông báo';
+    }
+  }
+
+  function requestNotificationPermissionIfNeeded() {
+    if (window.Notification && Notification.permission === 'default') {
+      Notification.requestPermission().then(syncNotifyButtonUI).catch(() => {});
+    }
+  }
+
   function showUpdateBanner(text) {
     el.updateBannerText.textContent = text;
     el.updateBanner.classList.remove('hidden');
@@ -1001,9 +1022,15 @@
     startPolling(currentUrl);
   }
 
-  el.trackBtn.addEventListener('click', () => track(el.urlInput.value));
+  el.trackBtn.addEventListener('click', () => {
+    requestNotificationPermissionIfNeeded();
+    track(el.urlInput.value);
+  });
   el.urlInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') track(el.urlInput.value);
+    if (e.key === 'Enter') {
+      requestNotificationPermissionIfNeeded();
+      track(el.urlInput.value);
+    }
   });
   el.refreshBtn.addEventListener('click', async () => {
     if (!currentUrl || el.refreshBtn.disabled) return;
@@ -1042,9 +1069,17 @@
       showError('Trình duyệt của bạn không hỗ trợ thông báo.');
       return;
     }
+    if (Notification.permission === 'denied') {
+      showError('Thông báo đã bị chặn cho trang này. Vào cài đặt trình duyệt (biểu tượng khoá/thông tin cạnh URL) để bật lại.');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      syncNotifyButtonUI();
+      return;
+    }
     const perm = await Notification.requestPermission();
+    syncNotifyButtonUI();
     if (perm === 'granted') {
-      el.notifyBtn.textContent = '🔔 Đã bật thông báo';
       new Notification('Đã bật thông báo cho giải đấu', {
         body: 'Bạn sẽ được báo khi trang gốc có cập nhật (khi tab này vẫn đang mở).',
       });
@@ -1092,6 +1127,7 @@
   }
 
   renderHistory();
+  syncNotifyButtonUI();
 
   if (isNewVisitor) {
     sendTrackEvent({ type: 'new_visitor' });
