@@ -402,11 +402,23 @@
       tableEl.appendChild(p);
       return;
     }
+
+    // chess-results.com includes empty "photo" placeholder columns (blank
+    // header, always-empty cells) purely for layout on their own site.
+    // We never populate a photo there, so drop those columns entirely -
+    // it's dead width, especially costly on narrow screens. Only hide a
+    // blank-header column if it's truly empty in every row, so we never
+    // accidentally drop real data.
+    const visibleIndexes = tableData.headers.map((h, i) => i).filter((i) => {
+      if ((tableData.headers[i] || '').trim() !== '') return true;
+      return tableData.rows.some((row) => cellText(row[i]).trim() !== '');
+    });
+
     const thead = document.createElement('thead');
     const trh = document.createElement('tr');
-    tableData.headers.forEach((h) => {
+    visibleIndexes.forEach((i) => {
       const th = document.createElement('th');
-      th.textContent = h || '';
+      th.textContent = tableData.headers[i] || '';
       trh.appendChild(th);
     });
     thead.appendChild(trh);
@@ -415,7 +427,8 @@
     const tbody = document.createElement('tbody');
     tableData.rows.forEach((row) => {
       const tr = document.createElement('tr');
-      row.forEach((cell) => {
+      visibleIndexes.forEach((i) => {
+        const cell = row[i];
         const td = document.createElement('td');
         if (cell && typeof cell === 'object' && cell.snr) {
           const span = document.createElement('span');
@@ -486,7 +499,10 @@
     const augmented = buildStartingListTableData(lastStartingList, lastStandings);
     renderTable(el.startingListTable, augmented);
 
-    const th = el.startingListTable.querySelectorAll('thead th')[augmented.scoreColIndex];
+    // Locate by text, not by index: renderTable() may drop blank-header
+    // columns, which shifts DOM positions relative to augmented.scoreColIndex.
+    const ths = el.startingListTable.querySelectorAll('thead th');
+    const th = Array.from(ths).find((t) => t.textContent.trim() === 'Điểm hiện tại');
     if (th) {
       th.classList.add('sortable');
       th.title = 'Bấm để sắp xếp theo điểm hiện tại (giảm dần), ưu tiên thứ tự ban đầu khi bằng điểm';

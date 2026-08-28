@@ -511,3 +511,102 @@ footer a { color: var(--accent); }
 .changelog-entry.fideid_changed,
 .changelog-entry.name_changed { border-left-color: var(--accent); }
 .changelog-entry.order_changed { border-left-color: #ffb347; }
+
+/* Mobile: tighter spacing/typography so more fits without horizontal
+   scrolling, and touch targets stay comfortable without wasting width. */
+@media (max-width: 640px) {
+  .topbar {
+    padding: 16px 12px 8px;
+  }
+
+  .topbar h1 {
+    font-size: 1.25rem;
+  }
+
+  .subtitle {
+    font-size: 0.82rem;
+  }
+
+  main {
+    padding: 0 12px 40px;
+  }
+
+  .input-card {
+    padding: 14px;
+  }
+
+  #trackBtn {
+    width: 100%;
+  }
+
+  .status-bar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .tournament-name {
+    font-size: 0.95rem;
+  }
+
+  .status-right {
+    gap: 6px;
+    width: 100%;
+  }
+
+  .status-right button.secondary {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+
+  .toggle {
+    font-size: 0.78rem;
+  }
+
+  .player-filter-bar {
+    padding: 8px 12px;
+  }
+
+  .player-filter-bar label {
+    font-size: 0.78rem;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .panel h2 {
+    font-size: 1rem;
+  }
+
+  table {
+    font-size: 0.74rem;
+  }
+
+  table thead th {
+    padding: 6px 7px;
+  }
+
+  table tbody td {
+    padding: 5px 7px;
+  }
+
+  .round-btn {
+    padding: 4px 9px;
+    font-size: 0.74rem;
+  }
+
+  .history-item-btn {
+    max-width: 190px;
+    padding: 5px 8px;
+    font-size: 0.76rem;
+  }
+
+  .changelog-entry {
+    font-size: 0.78rem;
+    padding: 6px 9px;
+  }
+
+  .player-tooltip {
+    max-width: calc(100vw - 24px);
+  }
+}
