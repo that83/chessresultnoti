@@ -393,7 +393,8 @@
     });
   }
 
-  function renderTable(tableEl, tableData) {
+  function renderTable(tableEl, tableData, options) {
+    const hideHeaders = (options && options.hideHeaders) || [];
     tableEl.innerHTML = '';
     if (!tableData || !tableData.headers || tableData.headers.length === 0) {
       const p = document.createElement('caption');
@@ -410,7 +411,9 @@
     // blank-header column if it's truly empty in every row, so we never
     // accidentally drop real data.
     const visibleIndexes = tableData.headers.map((h, i) => i).filter((i) => {
-      if ((tableData.headers[i] || '').trim() !== '') return true;
+      const header = (tableData.headers[i] || '').trim();
+      if (hideHeaders.includes(header)) return false;
+      if (header !== '') return true;
       return tableData.rows.some((row) => cellText(row[i]).trim() !== '');
     });
 
@@ -744,7 +747,7 @@
       alertRoundChanged(rd);
       if (selectedRound === rd) {
         el.pairingsTitle.textContent = `Bảng xếp cặp / kết quả ván ${rd}`;
-        renderTable(el.pairingsTable, fresh.table);
+        renderTable(el.pairingsTable, fresh.table, { hideHeaders: ['CLB/Tỉnh'] });
         applyPlayerFilter();
       }
     }
@@ -760,7 +763,7 @@
     const cached = loadRoundFromCache(meta.tnr, meta.group, rd);
     if (cached) {
       el.pairingsTitle.textContent = `Bảng xếp cặp / kết quả ván ${rd} (đã lưu cục bộ)`;
-      renderTable(el.pairingsTable, cached.table);
+      renderTable(el.pairingsTable, cached.table, { hideHeaders: ['CLB/Tỉnh'] });
       applyPlayerFilter();
     } else {
       el.pairingsTitle.textContent = `Đang tải ván ${rd}...`;
@@ -773,7 +776,7 @@
       saveRoundToCache(meta.tnr, meta.group, rd, fresh);
       if (selectedRound === rd) {
         el.pairingsTitle.textContent = `Bảng xếp cặp / kết quả ván ${rd}`;
-        renderTable(el.pairingsTable, fresh.table);
+        renderTable(el.pairingsTable, fresh.table, { hideHeaders: ['CLB/Tỉnh'] });
         applyPlayerFilter();
       }
       if (changed) {
@@ -828,7 +831,7 @@
       ? `Bảng xếp cặp / kết quả ván cuối (Ván ${pairings.round})`
       : `Bảng xếp cặp ván kế tiếp (Ván ${pairings.round}${pairings.totalRounds ? '/' + pairings.totalRounds : ''})`;
     el.pairingsTitle.textContent = label;
-    renderTable(el.pairingsTable, pairings.table);
+    renderTable(el.pairingsTable, pairings.table, { hideHeaders: ['CLB/Tỉnh'] });
     applyPlayerFilter();
   }
 
@@ -877,7 +880,7 @@
         ? 'Bảng xếp hạng chung cuộc'
         : `Xếp hạng sau ván ${data.standings.round}`;
       el.standingsTitle.textContent = label;
-      renderTable(el.standingsTable, data.standings.table);
+      renderTable(el.standingsTable, data.standings.table, { hideHeaders: ['CLB/Tỉnh'] });
       document.getElementById('standingsPanel').classList.remove('hidden');
     } else {
       document.getElementById('standingsPanel').classList.add('hidden');
