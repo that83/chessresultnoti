@@ -1,7 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
-import { getTournamentData, getPlayerHistory, UserFacingError } from './lib/scrape.js';
+import { getTournamentData, getPlayerHistory, getRoundPairings, UserFacingError } from './lib/scrape.js';
 import { logEvent, listVisitors } from './lib/log.js';
 
 if (process.env.VERCEL === undefined) {
@@ -19,8 +19,10 @@ app.use(express.json({ limit: '10kb' }));
 
 const cache = new Map();
 const playerCache = new Map();
+const roundCache = new Map();
 const CACHE_TTL_MS = 15000;
 const PLAYER_CACHE_TTL_MS = 60000;
+const ROUND_CACHE_TTL_MS = 300000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -71,6 +73,31 @@ app.get('/api/player', async (req, res) => {
     }
     console.error(err);
     res.status(502).json({ error: 'Không lấy được thông tin đấu thủ.' });
+  }
+});
+
+app.get('/api/round', async (req, res) => {
+  const { tnr, lan, fed, group, turdet, rd } = req.query;
+  if (!tnr || !rd) {
+    return res.status(400).json({ error: 'Thiếu tham số.' });
+  }
+
+  const key = [tnr, lan, fed, group, turdet, rd].join('|');
+  const cached = roundCache.get(key);
+  if (cached && Date.now() - cached.at < ROUND_CACHE_TTL_MS) {
+    return res.json(cached.data);
+  }
+
+  try {
+    const data = await getRoundPairings({ tnr, lan, fed, group, turdet, rd });
+    roundCache.set(key, { data, at: Date.now() });
+    res.json(data);
+  } catch (err) {
+    if (err instanceof UserFacingError) {
+      return res.status(400).json({ error: err.message });
+    }
+    console.error(err);
+    res.status(502).json({ error: 'Không lấy được dữ liệu ván đấu.' });
   }
 });
 

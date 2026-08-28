@@ -36,6 +36,8 @@
     urlHistory: document.getElementById('urlHistory'),
     changeLogList: document.getElementById('changeLogList'),
     clearChangeLogBtn: document.getElementById('clearChangeLogBtn'),
+    roundButtonsBar: document.getElementById('roundButtonsBar'),
+    updateBannerText: document.getElementById('updateBannerText'),
   };
 
   let lastHash = null;
@@ -45,6 +47,8 @@
   let lastStartingList = null;
   let lastStandings = null;
   let startingListSortByPoints = false;
+  let selectedRound = null;
+  let lastKnownCurrentRound = null;
   const baseTitle = document.title;
   let unreadCount = 0;
   let playerFilterTrackTimer = null;
@@ -643,6 +647,187 @@
     });
   }
 
+  function roundCacheKey(tnr, group, rd) {
+    return `chessresultnoti.round.${tnr}.${group}.${rd}`;
+  }
+
+  function loadRoundFromCache(tnr, group, rd) {
+    try {
+      const raw = localStorage.getItem(roundCacheKey(tnr, group, rd));
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveRoundToCache(tnr, group, rd, data) {
+    try {
+      localStorage.setItem(roundCacheKey(tnr, group, rd), JSON.stringify(data));
+    } catch (e) {
+      // storage full or unavailable; skip persisting
+    }
+  }
+
+  function tablesDiffer(a, b) {
+    return JSON.stringify(a) !== JSON.stringify(b);
+  }
+
+  async function fetchRoundData(meta, rd) {
+    const params = new URLSearchParams({
+      tnr: meta.tnr,
+      lan: meta.lan,
+      group: meta.group,
+      turdet: meta.turdet,
+      fed: meta.fed || '',
+      rd,
+    });
+    const res = await fetch('/api/round?' + params.toString());
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Lỗi');
+    return data;
+  }
+
+  function alertRoundChanged(rd) {
+    showUpdateBanner(`⚠️ Kết quả ván ${rd} vừa có thay đổi so với dữ liệu đã lưu trước đó!`);
+    try {
+      alert(`Kết quả ván ${rd} vừa có thay đổi so với dữ liệu đã lưu trước đó trên trình duyệt này. Vui lòng kiểm tra lại.`);
+    } catch (e) {
+      // alert() may be unavailable in some contexts; the banner above still shows
+    }
+  }
+
+  async function preloadRound(meta, rd) {
+    const cached = loadRoundFromCache(meta.tnr, meta.group, rd);
+    let fresh;
+    try {
+      fresh = await fetchRoundData(meta, rd);
+    } catch (e) {
+      return; // will retry on next load/poll
+    }
+    const changed = cached && tablesDiffer(cached.table, fresh.table);
+    saveRoundToCache(meta.tnr, meta.group, rd, fresh);
+    if (changed) {
+      alertRoundChanged(rd);
+      if (selectedRound === rd) {
+        el.pairingsTitle.textContent = `Bảng xếp cặp / kết quả ván ${rd}`;
+        renderTable(el.pairingsTable, fresh.table);
+        applyPlayerFilter();
+      }
+    }
+  }
+
+  function preloadHistoricalRounds(meta, uptoExclusive) {
+    for (let r = 1; r < uptoExclusive; r++) {
+      preloadRound(meta, r);
+    }
+  }
+
+  async function showSelectedRound(meta, rd) {
+    const cached = loadRoundFromCache(meta.tnr, meta.group, rd);
+    if (cached) {
+      el.pairingsTitle.textContent = `Bảng xếp cặp / kết quả ván ${rd} (đã lưu cục bộ)`;
+      renderTable(el.pairingsTable, cached.table);
+      applyPlayerFilter();
+    } else {
+      el.pairingsTitle.textContent = `Đang tải ván ${rd}...`;
+      renderTable(el.pairingsTable, { headers: [], rows: [] });
+    }
+
+    try {
+      const fresh = await fetchRoundData(meta, rd);
+      const changed = cached && tablesDiffer(cached.table, fresh.table);
+      saveRoundToCache(meta.tnr, meta.group, rd, fresh);
+      if (selectedRound === rd) {
+        el.pairingsTitle.textContent = `Bảng xếp cặp / kết quả ván ${rd}`;
+        renderTable(el.pairingsTable, fresh.table);
+        applyPlayerFilter();
+      }
+      if (changed) {
+        alertRoundChanged(rd);
+      }
+    } catch (e) {
+      if (!cached && selectedRound === rd) {
+        el.pairingsTitle.textContent = `Không tải được ván ${rd}`;
+      }
+    }
+  }
+
+  function selectRound(meta, rd, currentRound) {
+    if (rd === currentRound) {
+      selectedRound = null;
+    } else {
+      selectedRound = rd;
+      showSelectedRound(meta, rd);
+    }
+    renderRoundButtons(meta, currentRound);
+    if (selectedRound === null) {
+      renderLivePairings(lastPairingsData);
+    }
+  }
+
+  function renderRoundButtons(meta, currentRound) {
+    el.roundButtonsBar.innerHTML = '';
+    if (!currentRound || currentRound < 2) {
+      el.roundButtonsBar.classList.add('hidden');
+      return;
+    }
+    el.roundButtonsBar.classList.remove('hidden');
+    for (let r = 1; r <= currentRound; r++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'round-btn' + ((selectedRound === null ? r === currentRound : r === selectedRound) ? ' active' : '');
+      btn.textContent = r === currentRound ? `V${r} (hiện tại)` : `V${r}`;
+      btn.addEventListener('click', () => selectRound(meta, r, currentRound));
+      el.roundButtonsBar.appendChild(btn);
+    }
+  }
+
+  let lastPairingsData = null;
+
+  function renderLivePairings(pairings) {
+    if (!pairings) {
+      document.getElementById('pairingsPanel').classList.add('hidden');
+      return;
+    }
+    document.getElementById('pairingsPanel').classList.remove('hidden');
+    const label = pairings.isFinal
+      ? `Bảng xếp cặp / kết quả ván cuối (Ván ${pairings.round})`
+      : `Bảng xếp cặp ván kế tiếp (Ván ${pairings.round}${pairings.totalRounds ? '/' + pairings.totalRounds : ''})`;
+    el.pairingsTitle.textContent = label;
+    renderTable(el.pairingsTable, pairings.table);
+    applyPlayerFilter();
+  }
+
+  function renderPairingsPanel(meta, pairings) {
+    lastPairingsData = pairings;
+    if (!pairings) {
+      document.getElementById('pairingsPanel').classList.add('hidden');
+      el.roundButtonsBar.classList.add('hidden');
+      return;
+    }
+
+    const currentRound = pairings.round;
+    renderRoundButtons(meta, currentRound);
+
+    if (selectedRound === null) {
+      renderLivePairings(pairings);
+    } else if (selectedRound === currentRound) {
+      selectedRound = null;
+      renderLivePairings(pairings);
+    }
+    // else: user is browsing a historical round; leave that view as-is,
+    // it updates itself via showSelectedRound/preloadRound.
+
+    if (lastKnownCurrentRound === null) {
+      preloadHistoricalRounds(meta, currentRound);
+    } else if (currentRound > lastKnownCurrentRound) {
+      for (let r = lastKnownCurrentRound; r < currentRound; r++) {
+        preloadRound(meta, r);
+      }
+    }
+    lastKnownCurrentRound = currentRound;
+  }
+
   function renderData(data, isFirstLoad) {
     currentMeta = data.meta;
     el.tournamentName.textContent = data.meta.tournamentName || 'Giải đấu';
@@ -651,16 +836,7 @@
     el.playerFilterBar.classList.remove('hidden');
     el.content.classList.remove('hidden');
 
-    if (data.pairings) {
-      const label = data.pairings.isFinal
-        ? `Bảng xếp cặp / kết quả ván cuối (Ván ${data.pairings.round})`
-        : `Bảng xếp cặp ván kế tiếp (Ván ${data.pairings.round}${data.pairings.totalRounds ? '/' + data.pairings.totalRounds : ''})`;
-      el.pairingsTitle.textContent = label;
-      renderTable(el.pairingsTable, data.pairings.table);
-      document.getElementById('pairingsPanel').classList.remove('hidden');
-    } else {
-      document.getElementById('pairingsPanel').classList.add('hidden');
-    }
+    renderPairingsPanel(data.meta, data.pairings);
 
     if (data.standings) {
       const label = data.standings.isFinal
@@ -726,9 +902,14 @@
     updateTabTitle();
   }
 
-  function notifyUpdate(data) {
+  function showUpdateBanner(text) {
+    el.updateBannerText.textContent = text;
     el.updateBanner.classList.remove('hidden');
     markUnreadUpdate();
+  }
+
+  function notifyUpdate(data) {
+    showUpdateBanner('⚡ Có cập nhật mới!');
     let body = 'Trang giải đấu vừa có thay đổi mới.';
     if (data.pairings && !data.pairings.isFinal) {
       body = `Có cập nhật cho ván ${data.pairings.round}.`;
@@ -794,6 +975,8 @@
     lastHash = null;
     playerDataCache.clear();
     startingListSortByPoints = false;
+    selectedRound = null;
+    lastKnownCurrentRound = null;
     localStorage.setItem(STORAGE_KEY, currentUrl);
     loadData(currentUrl, true);
     startPolling(currentUrl);

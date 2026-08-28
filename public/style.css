@@ -331,6 +331,38 @@ button.secondary:hover {
   color: var(--muted);
 }
 
+.round-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.round-btn {
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 5px 11px;
+  border-radius: 999px;
+}
+
+.round-btn:hover {
+  background: var(--row-alt);
+}
+
+.round-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.round-btn.stale {
+  border-color: #ffb347;
+  color: #ffb347;
+}
+
 .update-banner {
   margin-top: 14px;
   background: linear-gradient(90deg, #ffb347, #ff7b54);
