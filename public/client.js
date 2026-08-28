@@ -17,6 +17,7 @@
     tournamentName: document.getElementById('tournamentName'),
     lastUpdated: document.getElementById('lastUpdated'),
     notifyBtn: document.getElementById('notifyBtn'),
+    shareBtn: document.getElementById('shareBtn'),
     refreshBtn: document.getElementById('refreshBtn'),
     autoToggle: document.getElementById('autoToggle'),
     pollInterval: document.getElementById('pollInterval'),
@@ -133,6 +134,23 @@
     if (t === '') return null;
     const n = parseFloat(t.replace(',', '.'));
     return Number.isNaN(n) ? null : n;
+  }
+
+  function getSharedUrlFromLocation() {
+    try {
+      return new URLSearchParams(window.location.search).get('g');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function updateAppUrl(sourceUrl) {
+    try {
+      const newUrl = window.location.pathname + '?g=' + encodeURIComponent(sourceUrl);
+      window.history.replaceState(null, '', newUrl);
+    } catch (e) {
+      // ignore (e.g. sandboxed context without history access)
+    }
   }
 
   function loadHistory() {
@@ -867,6 +885,7 @@
 
     if (isFirstLoad) {
       saveHistoryEntry(data.meta);
+      updateAppUrl(data.meta.sourceUrl);
       sendTrackEvent({
         type: 'view_tournament',
         tnr: data.meta.tnr,
@@ -1006,6 +1025,18 @@
     localStorage.removeItem(changeLogStorageKey(currentMeta.tnr, currentMeta.group));
     renderChangeLog(currentMeta.tnr, currentMeta.group);
   });
+  el.shareBtn.addEventListener('click', async () => {
+    const originalText = el.shareBtn.textContent;
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      el.shareBtn.textContent = '✅ Đã copy!';
+    } catch (e) {
+      el.shareBtn.textContent = '⚠️ Copy thủ công từ thanh địa chỉ';
+    }
+    setTimeout(() => {
+      el.shareBtn.textContent = originalText;
+    }, 1800);
+  });
   el.notifyBtn.addEventListener('click', async () => {
     if (!window.Notification) {
       showError('Trình duyệt của bạn không hỗ trợ thông báo.');
@@ -1066,7 +1097,7 @@
     sendTrackEvent({ type: 'new_visitor' });
   }
 
-  const saved = localStorage.getItem(STORAGE_KEY);
+  const saved = getSharedUrlFromLocation() || localStorage.getItem(STORAGE_KEY);
   if (saved) {
     el.urlInput.value = saved;
     track(saved);
