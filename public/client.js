@@ -34,6 +34,8 @@
     playerFilterBar: document.getElementById('playerFilterBar'),
     playerFilterInput: document.getElementById('playerFilterInput'),
     playerTooltip: document.getElementById('playerTooltip'),
+    playerTooltipContent: document.getElementById('playerTooltipContent'),
+    tooltipCloseBtn: document.getElementById('tooltipCloseBtn'),
     urlHistory: document.getElementById('urlHistory'),
     changeLogList: document.getElementById('changeLogList'),
     clearChangeLogBtn: document.getElementById('clearChangeLogBtn'),
@@ -341,8 +343,8 @@
       wrap.appendChild(note);
     }
 
-    el.playerTooltip.innerHTML = '';
-    el.playerTooltip.appendChild(wrap);
+    el.playerTooltipContent.innerHTML = '';
+    el.playerTooltipContent.appendChild(wrap);
   }
 
   async function showPlayerTooltip(span) {
@@ -353,7 +355,7 @@
     const token = ++hoverToken;
 
     positionTooltipNear(span);
-    el.playerTooltip.innerHTML = '<div class="tt-loading">Đang tải...</div>';
+    el.playerTooltipContent.innerHTML = '<div class="tt-loading">Đang tải...</div>';
 
     let data = playerDataCache.get(key);
     if (!data) {
@@ -372,7 +374,7 @@
         playerDataCache.set(key, data);
       } catch (err) {
         if (token !== hoverToken) return;
-        el.playerTooltip.innerHTML = '<div class="tt-error">Không tải được thông tin đấu thủ.</div>';
+        el.playerTooltipContent.innerHTML = '<div class="tt-error">Không tải được thông tin đấu thủ.</div>';
         return;
       }
     }
@@ -1065,6 +1067,19 @@
   });
   el.dismissBanner.addEventListener('click', () => {
     el.updateBanner.classList.add('hidden');
+  });
+  el.tooltipCloseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    hideTooltip();
+  });
+  document.addEventListener('click', (e) => {
+    if (el.playerTooltip.classList.contains('hidden')) return;
+    if (el.playerTooltip.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('.player-link')) return;
+    hideTooltip();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideTooltip();
   });
   el.clearChangeLogBtn.addEventListener('click', () => {
     if (!currentMeta) return;
